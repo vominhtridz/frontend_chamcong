@@ -1,0 +1,129 @@
+/* Layout Container */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #f4f6f9; /* Màu nền xám nhạt hiện đại */
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header */
+.modern-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+  background-color: #ffffff;
+  padding: 0 24px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  z-index: 10;
+}
+
+.header-logo h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+  color: #333;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.btn-logout {
+  background-color: #ffeaea;
+  color: #e74c3c;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.btn-logout:hover {
+  background-color: #e74c3c;
+  color: white;
+}
+
+/* App Body (Sidebar + Content) */
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden; /* Ngăn scroll toàn trang, chỉ scroll content */
+}
+
+/* Sidebar */
+.modern-sidebar {
+  width: 250px;
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+}
+
+.menu-title {
+  padding: 0 24px;
+  font-size: 12px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  margin-top: 20px;
+}
+
+.sidebar-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-nav li a {
+  display: flex;
+  align-items: center;
+  padding: 12px 24px;
+  color: #475569;
+  text-decoration: none;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.sidebar-nav li a:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* React Router NavLink tự động thêm class 'active' */
+.sidebar-nav li a.active {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border-left-color: #0284c7;
+  font-weight: 600;
+}
+
+/* Content Area */
+.app-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto; /* Cho phép cuộn dọc phần nội dung */
+}
