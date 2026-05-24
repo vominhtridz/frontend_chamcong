@@ -66,41 +66,60 @@ const Login = () => {
     }
   };
 
-  const styles = {
-    container: { maxWidth: '400px', margin: '100px auto', fontFamily: 'sans-serif', padding: '30px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '8px', backgroundColor: '#fff' },
-    title: { textAlign: 'center', color: '#333', marginBottom: '25px' },
-    inputGroup: { marginBottom: '20px', position: 'relative' },
-    label: { display: 'block', marginBottom: '8px', fontWeight: 'bold', fontSize: '14px', color: '#555' },
-    input: { width: '100%', padding: '12px', paddingRight: '40px', borderRadius: '4px', border: '1px solid #ccc', boxSizing: 'border-box', fontSize: '15px' },
-    eyeButton: { position: 'absolute', right: '10px', top: '35px', background: 'none', border: 'none', cursor: 'pointer', color: '#666', fontSize: '18px' },
-    submitBtn: { width: '100%', padding: '12px', backgroundColor: '#4caf50', color: 'white', border: 'none', borderRadius: '4px', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '16px', fontWeight: 'bold', marginTop: '10px' },
-    linkText: { display: 'block', textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#1976d2', textDecoration: 'none' },
-  };
-
   return (
-    <div style={styles.container}>
-      <h2 style={styles.title}>Đăng Nhập</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Email</label>
-          <input type="email" name="email" value={formData.email} onChange={handleChange} required style={styles.input} placeholder="Nhập email..." />
-        </div>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2>Đăng Nhập</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="auth-field">
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Nhập email..."
+            />
+          </div>
 
-        <div style={styles.inputGroup}>
-          <label style={styles.label}>Mật khẩu</label>
-          <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={handleChange} required style={styles.input} placeholder="Nhập mật khẩu..." />
-          <button type="button" onClick={() => setShowPassword(!showPassword)} style={styles.eyeButton}>
-            {showPassword ? <FiEyeOff /> : <FiEye />}
+          <div className="auth-field">
+            <label>Mật khẩu</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Nhập mật khẩu..."
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="auth-eye"
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </button>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="auth-submit"
+            style={{ backgroundColor: '#4caf50' }}
+          >
+            {loading ? 'Đang xử lý...' : 'Đăng nhập'}
           </button>
-        </div>
+        </form>
 
-        <button type="submit" disabled={loading} style={styles.submitBtn}>
-          {loading ? 'Đang xử lý...' : 'Đăng nhập'}
-        </button>
-      </form>
-
-      <Link to="/register" style={styles.linkText}>Chưa có tài khoản? Đăng ký ngay</Link>
-      <Link to="/forgot-password" style={styles.linkText}>Quên mật khẩu?</Link>
+        <Link to="/register" className="auth-link">
+          Chưa có tài khoản? Đăng ký ngay
+        </Link>
+        <Link to="/forgot-password" className="auth-link">
+          Quên mật khẩu?
+        </Link>
+      </div>
     </div>
   );
 };

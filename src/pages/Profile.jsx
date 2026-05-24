@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
+import LeaveRequestPanel from '../components/LeaveRequestPanel';
 import { persistUser } from '../utils/auth';
 
 const Profile = () => {
@@ -80,7 +81,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="page-shell max-w-5xl mx-auto">
       <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
         
         {/* Banner */}
@@ -91,7 +92,7 @@ useEffect(() => {
         </div>
 
         {/* Content */}
-        <div className="px-8 pb-10 -mt-20 relative z-10">
+        <div className="px-4 sm:px-8 pb-8 sm:pb-10 -mt-16 sm:-mt-20 relative z-10">
           
           {/* Avatar + Info */}
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -107,12 +108,12 @@ useEffect(() => {
                   )}&background=4F46E5&color=fff&size=256`
                 }
                 alt="Avatar"
-                className="w-40 h-40 rounded-full border-4 border-white object-cover shadow-xl bg-gray-200"
+                className="w-28 h-28 sm:w-40 sm:h-40 rounded-full border-4 border-white object-cover shadow-xl bg-gray-200"
               />
 
               {/* User Info */}
               <div className="text-center md:text-left">
-                <h1 className="text-3xl font-bold text-gray-800">
+                <h1 className="text-xl sm:text-3xl font-bold text-gray-800">
                   {user.personalInfo?.fullName || 'Chưa cập nhật'}
                 </h1>
 
@@ -263,6 +264,12 @@ useEffect(() => {
             </div>
           </div>
         </div>
+
+        {user.role === 'Employee' && (
+          <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <LeaveRequestPanel compact />
+          </div>
+        )}
       </div>
     </div>
   );

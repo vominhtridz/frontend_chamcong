@@ -130,6 +130,22 @@ export const CHECKIN_LIVENESS_STEPS = [
 
 
 
+/** Bước cuối trước khi chụp descriptor — đảm bảo mặt thẳng, ổn định */
+
+export const CHECKIN_CAPTURE_STEP = {
+
+  id: CHALLENGES.FRONT,
+
+  label: 'Chuẩn bị chụp: Nhìn thẳng vào camera',
+
+  hint: 'Giữ mặt thẳng, không di chuyển',
+
+  holdFrames: 15,
+
+};
+
+
+
 export const CHALLENGE_LABELS = {
 
   [CHALLENGES.BLINK]: 'Vui lòng chớp mắt 2 lần',
@@ -171,6 +187,12 @@ export const createLivenessSessionState = () => ({
   lastBlinkAt: 0,
 
   closedSince: 0,
+
+  closedHoldStart: 0,
+
+  /** Sau 4 bước liveness: chờ nhìn thẳng trước khi chụp */
+
+  captureReady: false,
 
 });
 
@@ -215,55 +237,59 @@ const isPoseSatisfied = (stepId, yaw, state) => {
 
 
 /**
- * Phát hiện chớp mắt: kết hợp ngưỡng tuyệt đối + sụt EAR so với baseline gần đây.
- * Tránh bỏ lỡ nháy mắt nhanh khi chỉ lấy mẫu ~50–120ms/lần.
+ * Phát hiện chớp mắt với hysteresis rõ ràng (mắt đóng < mắt mở).
+ * Đếm 1 lần chớp khi chuyển closed → open sau khi mắt đã nhắm đủ lâu.
  */
 const updateBlinkState = (leftEAR, rightEAR, state, now = Date.now()) => {
   const avgEAR = (leftEAR + rightEAR) / 2;
   const minEAR = Math.min(leftEAR, rightEAR);
 
-  const EAR_CLOSED_MAX = 0.23;
-  const EAR_OPEN_MIN = 0.21;
-  const RELATIVE_DROP = 0.72;
-  const RELATIVE_RECOVER = 0.85;
-  const MIN_BLINK_GAP_MS = 280;
-  const CLOSED_TIMEOUT_MS = 600;
+  const EAR_CLOSED = 0.19;
+  const EAR_OPEN = 0.23;
+  const RELATIVE_DROP = 0.68;
+  const RELATIVE_RECOVER = 0.82;
+  const MIN_BLINK_GAP_MS = 220;
+  const CLOSED_HOLD_MS = 80;
+  const CLOSED_TIMEOUT_MS = 900;
 
   if (!state.blinkPhase) state.blinkPhase = 'open';
 
   if (avgEAR > (state.earBaseline || 0)) {
-    state.earBaseline = avgEAR * 0.35 + (state.earBaseline || avgEAR) * 0.65;
+    state.earBaseline = avgEAR * 0.4 + (state.earBaseline || avgEAR) * 0.6;
   } else if (!state.earBaseline) {
     state.earBaseline = avgEAR;
   }
 
-  const baseline = Math.max(state.earBaseline, 0.15);
+  const baseline = Math.max(state.earBaseline, 0.14);
   const relativeLow = minEAR / baseline < RELATIVE_DROP;
-  const absoluteClosed = minEAR < EAR_CLOSED_MAX || avgEAR < EAR_CLOSED_MAX;
+  const absoluteClosed = minEAR < EAR_CLOSED;
   const eyesClosed = relativeLow || absoluteClosed;
 
-  const relativeOpen = avgEAR / baseline > RELATIVE_RECOVER;
-  const absoluteOpen = avgEAR > EAR_OPEN_MIN && minEAR > EAR_OPEN_MIN;
+  const relativeOpen = avgEAR / baseline > RELATIVE_RECOVER && minEAR / baseline > RELATIVE_RECOVER * 0.9;
+  const absoluteOpen = avgEAR > EAR_OPEN && minEAR > EAR_OPEN * 0.85;
   const eyesOpen = relativeOpen || absoluteOpen;
 
   if (state.blinkPhase === 'closed' && now - (state.closedSince || now) > CLOSED_TIMEOUT_MS) {
     state.blinkPhase = 'open';
     state.closedSince = 0;
+    state.closedHoldStart = 0;
   }
 
   if (state.blinkPhase === 'open' && eyesClosed) {
     state.blinkPhase = 'closed';
     state.closedSince = now;
-  } else if (
-    state.blinkPhase === 'closed' &&
-    eyesOpen &&
-    now - (state.lastBlinkAt || 0) >= MIN_BLINK_GAP_MS
-  ) {
-    state.blinkCount = (state.blinkCount || 0) + 1;
-    state.blinkPhase = 'open';
-    state.lastBlinkAt = now;
-    state.closedSince = 0;
-    state.earBaseline = avgEAR;
+    state.closedHoldStart = now;
+  } else if (state.blinkPhase === 'closed') {
+    const heldClosed = now - (state.closedHoldStart || now) >= CLOSED_HOLD_MS;
+
+    if (eyesOpen && heldClosed && now - (state.lastBlinkAt || 0) >= MIN_BLINK_GAP_MS) {
+      state.blinkCount = (state.blinkCount || 0) + 1;
+      state.blinkPhase = 'open';
+      state.lastBlinkAt = now;
+      state.closedSince = 0;
+      state.closedHoldStart = 0;
+      state.earBaseline = Math.max(avgEAR, state.earBaseline || avgEAR);
+    }
   }
 };
 
@@ -419,13 +445,99 @@ export const advanceLivenessStep = (state) => {
 
   state.closedSince = 0;
 
+  state.closedHoldStart = 0;
+
 };
 
 
 
 export const isCheckinLivenessComplete = (state) =>
 
-  (state.stepIndex ?? 0) >= CHECKIN_LIVENESS_STEPS.length;
+  (state.stepIndex ?? 0) >= CHECKIN_LIVENESS_STEPS.length && state.captureReady === true;
+
+
+
+/** Xử lý bước nhìn thẳng cuối cùng trước khi trích descriptor */
+
+export const processCaptureReadyStep = (detection, state, options = {}) => {
+
+  const mirrorPreview = options.mirrorPreview !== false;
+
+  const step = CHECKIN_CAPTURE_STEP;
+
+
+
+  if (!detection?.landmarks) {
+
+    state.holdFrames = 0;
+
+    return {
+
+      completed: false,
+
+      stepProgress: 0,
+
+      statusText: `${step.label} — Đưa mặt vào khung hình`,
+
+    };
+
+  }
+
+
+
+  const yaw = getDisplayYaw(detection.landmarks, mirrorPreview);
+
+  const satisfied = Math.abs(yaw) <= YAW_FRONT_MAX;
+
+  const holdTarget = step.holdFrames;
+
+
+
+  if (satisfied) {
+
+    state.holdFrames = (state.holdFrames || 0) + 1;
+
+  } else {
+
+    state.holdFrames = 0;
+
+  }
+
+
+
+  const stepProgress = Math.min(100, Math.round((state.holdFrames / holdTarget) * 100));
+
+  const completed = state.holdFrames >= holdTarget;
+
+
+
+  if (completed) {
+
+    state.captureReady = true;
+
+  }
+
+
+
+  return {
+
+    completed,
+
+    stepProgress,
+
+    statusText: completed
+
+      ? `${step.label} — Sẵn sàng chụp!`
+
+      : satisfied
+
+        ? `${step.label} — Giữ nguyên (${state.holdFrames}/${holdTarget})`
+
+        : `${step.label} — Nhìn thẳng vào camera`,
+
+  };
+
+};
 
 
 

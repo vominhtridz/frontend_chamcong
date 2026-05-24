@@ -7,11 +7,13 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import Profile from './pages/Profile';
 import EmployeeDashboard from './pages/EmployeeDashboard';
+import EmployeeLeaves from './pages/EmployeeLeaves';
 import FaceCheckin from './pages/FaceCheckin';
 import EmployeeManagement from './pages/EmployeeManagement';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
 import AttendanceManagement from './pages/AttendanceManagement';
+import LeaveManagement from './pages/LeaveManagement';
 
 import ProtectedRoute from './components/ProtectedRoute';
 import HomeRedirect from './components/HomeRedirect';
@@ -31,6 +33,10 @@ function App() {
             <Route path="/profile" element={<Profile />} />
           </Route>
 
+          <Route element={<ProtectedRoute allowedRoles={['Employee']} allowRestrictedEmployee />}>
+            <Route path="/employee/leaves" element={<EmployeeLeaves />} />
+          </Route>
+
           <Route element={<ProtectedRoute allowedRoles={['Employee']} />}>
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="/employee/checkin" element={<FaceCheckin />} />
@@ -40,6 +46,7 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/settings" element={<Settings />} />
             <Route path="/admin/attendance" element={<AttendanceManagement />} />
+            <Route path="/admin/leaves" element={<LeaveManagement />} />
             <Route path="/admin/employees" element={<EmployeeManagement />} />
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>

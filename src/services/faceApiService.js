@@ -179,7 +179,7 @@ export const extractFaceDescriptor = async (imageVideoElement) => {
   const detection = await faceapi
     .detectSingleFace(
       imageVideoElement,
-      new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
+      new faceapi.SsdMobilenetv1Options({ minConfidence: 0.55 })
     )
     .withFaceLandmarks()
     .withFaceDescriptor();
@@ -206,6 +206,30 @@ export const compareFaces = (descriptor1, descriptor2, threshold = FACE_MATCH_TH
   return {
     isMatch: distance < threshold,
     distance: Number(distance.toFixed(4)),
+  };
+};
+
+/** So khớp probe với nhiều mẫu — trả về khoảng cách nhỏ nhất */
+export const matchBestFromSamples = (samples, probe, threshold = FACE_MATCH_THRESHOLD) => {
+  if (!Array.isArray(samples) || samples.length === 0) {
+    throw new Error('Chưa có mẫu khuôn mặt để so khớp.');
+  }
+
+  let minDistance = Infinity;
+  let bestIndex = -1;
+
+  samples.forEach((sample, index) => {
+    const { distance } = compareFaces(sample, probe, threshold);
+    if (distance < minDistance) {
+      minDistance = distance;
+      bestIndex = index;
+    }
+  });
+
+  return {
+    isMatch: minDistance < threshold,
+    distance: Number(minDistance.toFixed(4)),
+    bestIndex,
   };
 };
 
