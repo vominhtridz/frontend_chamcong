@@ -74,8 +74,9 @@ const Settings = () => {
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow mb-4 md:mb-6">
         <h2 className="text-lg font-semibold mb-2 border-b pb-2">Giờ làm theo ca</h2>
         <p className="text-xs text-gray-500 mb-4">
-          Mỗi nhân viên được gán ca trong Quản lý Nhân viên. Hệ thống dùng khung giờ tương ứng khi
-          check-in/check-out.
+          Mỗi nhân viên được gán ca trong Quản lý Nhân viên. &quot;Ngưỡng đúng giờ&quot; là số phút
+          sau giờ bắt đầu vẫn tính đúng giờ; sau đó vẫn cho check-in nhưng ghi trễ. Trễ không chặn
+          chấm công.
         </p>
         <div className="space-y-4">
           {WORK_SHIFTS.map((shift) => {
@@ -106,7 +107,7 @@ const Settings = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs mb-1">Phút trễ tối đa</label>
+                    <label className="block text-xs mb-1">Ngưỡng đúng giờ (phút)</label>
                     <input
                       type="number"
                       min="0"

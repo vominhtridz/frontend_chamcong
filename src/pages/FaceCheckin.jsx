@@ -93,6 +93,16 @@ const FaceCheckin = () => {
       const configRes = await axiosClient.get('/api/attendances/work-config');
       setWorkConfig(configRes.data);
 
+      if (configRes.data?.isCompleted || configRes.data?.phase === 'completed') {
+        syncPhase('done');
+        setStatusMsg(
+          configRes.data?.message ||
+            'Bạn đã hoàn tất chấm công hôm nay. Chờ ngày ca tiếp theo.'
+        );
+        setHintMsg('');
+        return;
+      }
+
       setStatusMsg('Đang mở camera...');
       const video = await waitForVideoElement(() => videoRef.current);
       streamRef.current = await startCamera(video);
@@ -114,6 +124,12 @@ const FaceCheckin = () => {
 
   const performCheckIn = useCallback(async () => {
     if (submittingRef.current) return;
+
+    if (workConfig?.isCompleted || workConfig?.phase === 'completed') {
+      toast.info('Bạn đã hoàn tất chấm công hôm nay. Quay lại vào ngày ca tiếp theo.');
+      return;
+    }
+
     submittingRef.current = true;
     setSubmitting(true);
 
@@ -150,8 +166,11 @@ const FaceCheckin = () => {
       setHintMsg('');
       syncPhase('done');
 
-      if (response.data.action === 'checkIn') {
-        setTimeout(() => startNewSession(), 4000);
+      const configRes = await axiosClient.get('/api/attendances/work-config');
+      setWorkConfig(configRes.data);
+
+      if (response.data.action === 'checkIn' && !response.data.alreadyCompleted) {
+        setTimeout(() => startNewSession(), 3500);
       }
     } catch (error) {
       const message =
@@ -173,7 +192,7 @@ const FaceCheckin = () => {
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [stopCamera, initSession, startNewSession, checkLighting]);
+  }, [stopCamera, initSession, startNewSession, checkLighting, workConfig]);
 
   const runLivenessLoop = useCallback(() => {
     const video = videoRef.current;
@@ -395,9 +414,16 @@ const FaceCheckin = () => {
               <button
                 type="button"
                 onClick={startNewSession}
-                className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700"
+                disabled={workConfig?.isCompleted && phase === 'done'}
+                className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {phase === 'error' ? 'Thử lại' : 'Chấm công lần nữa'}
+                {workConfig?.isCompleted && phase === 'done'
+                  ? 'Đã xong ca hôm nay — quay lại ngày mai'
+                  : phase === 'error'
+                    ? 'Thử lại'
+                    : workConfig?.phase === 'checkOut' || workConfig?.record?.checkInTime
+                      ? 'Tiếp tục check-out'
+                      : 'Chấm công lần nữa'}
               </button>
             )}
           </div>
@@ -413,12 +439,16 @@ const FaceCheckin = () => {
                   </li>
                   <li>
                     <span className="text-slate-500">Check-in:</span> từ{' '}
-                    <strong>{workConfig.workStartTime}</strong> (trễ tối đa{' '}
-                    {workConfig.lateThreshold} phút)
+                    <strong>{workConfig.workStartTime}</strong> — trễ vẫn được ghi (ngưỡng đúng
+                    giờ: {workConfig.lateThreshold} phút)
                   </li>
                   <li>
-                    <span className="text-slate-500">Check-out:</span> từ{' '}
-                    <strong>{workConfig.workEndTime}</strong> trở đi
+                    <span className="text-slate-500">Check-out:</span> bất kỳ lúc nào sau khi đã
+                    check-in (ghi sớm/muộn nếu có)
+                  </li>
+                  <li>
+                    <span className="text-slate-500">Giới hạn:</span> mỗi ngày ca chỉ 1 check-in + 1
+                    check-out
                   </li>
                   <li className="pt-2 text-indigo-700 font-medium">{workConfig.message}</li>
                 </ul>
@@ -436,9 +466,15 @@ const FaceCheckin = () => {
               </ol>
             </div>
             <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200 text-sm text-amber-900">
-              Bật đèn đủ sáng trước khi chấm công. Không dùng ảnh in hay video. Mỗi bước cần giữ
-              tư thế vài giây. Nhận diện sai sẽ không đăng xuất — chỉ báo lỗi để thử lại.
+              Bật đèn đủ sáng trước khi chấm công. Trễ vẫn được ghi nhận và tính giờ làm. Sau khi
+              check-out xong, chờ ngày ca tiếp theo mới chấm lại. Muốn thử nhiều lần? Dùng trang
+              Test chấm công.
             </div>
+            {workConfig?.isCompleted && (
+              <div className="bg-green-50 rounded-2xl p-5 border border-green-200 text-sm text-green-900">
+                ✓ Bạn đã hoàn tất check-in và check-out cho ca {workConfig.shiftDate}.
+              </div>
+            )}
           </div>
         </div>
       </div>

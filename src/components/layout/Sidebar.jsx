@@ -51,6 +51,15 @@ const Sidebar = ({ isOpen, onNavigate }) => {
                   ⏰ Check-in / Check-out
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/employee/attendance-test"
+                  className={linkClass}
+                  onClick={handleNav}
+                >
+                  🧪 Test chấm công
+                </NavLink>
+              </li>
             </>
           )}
         </ul>

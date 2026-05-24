@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import EmployeeLeaves from './pages/EmployeeLeaves';
 import FaceCheckin from './pages/FaceCheckin';
+import AttendanceTest from './pages/AttendanceTest';
 import EmployeeManagement from './pages/EmployeeManagement';
 import AdminDashboard from './pages/AdminDashboard';
 import Settings from './pages/Settings';
@@ -40,6 +41,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={['Employee']} />}>
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="/employee/checkin" element={<FaceCheckin />} />
+            <Route path="/employee/attendance-test" element={<AttendanceTest />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['Admin']} />}>

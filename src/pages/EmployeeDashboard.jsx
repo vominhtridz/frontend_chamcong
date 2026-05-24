@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import LeaveRequestPanel from '../components/LeaveRequestPanel';
 import { getStoredUser } from '../utils/auth';
 import { shiftLabel } from '../utils/employeeConstants';
-import { formatTime, statusLabel } from '../utils/attendanceDisplay';
+import { formatTime, statusLabel, formatMinutes, checkOutStatusLabel } from '../utils/attendanceDisplay';
+import { Link } from 'react-router-dom';
 
 const EmployeeDashboard = () => {
   const user = getStoredUser();
@@ -77,6 +77,23 @@ const EmployeeDashboard = () => {
               >
                 {statusLabel(shiftRecord.status).text}
               </span>
+              {shiftRecord.lateMinutes > 0 && (
+                <p className="text-sm text-orange-600">Trễ check-in: {shiftRecord.lateMinutes} phút</p>
+              )}
+              {shiftRecord.workedMinutes > 0 && (
+                <p className="text-sm text-gray-600">
+                  Giờ làm: {formatMinutes(shiftRecord.workedMinutes)}
+                </p>
+              )}
+              {shiftRecord.checkOutStatus && (
+                <span
+                  className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                    checkOutStatusLabel(shiftRecord.checkOutStatus).className
+                  }`}
+                >
+                  {checkOutStatusLabel(shiftRecord.checkOutStatus).text}
+                </span>
+              )}
               {shiftRecord.note && (
                 <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded border">
                   <span className="font-medium">Ghi chú:</span> {shiftRecord.note}
@@ -84,19 +101,32 @@ const EmployeeDashboard = () => {
               )}
               {!shiftRecord.checkOutTime && (
                 <p className="text-sm text-indigo-600 mt-2">
-                  Bạn chưa check-out. Chỉ check-out được từ {workConfig?.workEndTime} trở đi.
+                  Bạn chưa check-out — có thể check-out bất kỳ lúc nào sau khi đã vào ca.
+                </p>
+              )}
+              {workConfig?.isCompleted && (
+                <p className="text-sm text-green-700 mt-2 font-medium">
+                  Đã hoàn tất ca hôm nay. Chờ ngày ca tiếp theo để chấm công lại.
                 </p>
               )}
             </div>
           ) : (
             <p className="text-gray-500 mb-4">Chưa có chấm công cho ca này.</p>
           )}
-          <Link
-            to="/employee/checkin"
-            className="inline-block w-full sm:w-auto text-center mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow transition"
-          >
-            ⏰ Đi tới Check-in / Check-out
-          </Link>
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Link
+              to="/employee/checkin"
+              className="inline-block text-center px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow transition"
+            >
+              ⏰ Check-in / Check-out
+            </Link>
+            <Link
+              to="/employee/attendance-test"
+              className="inline-block text-center px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow transition"
+            >
+              🧪 Test chấm công
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-6">
