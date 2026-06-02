@@ -1,0 +1,277 @@
+/* Attendance Status Matrix Styles */
+
+.status-matrix {
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: #f8f9fa;
+  border-left: 4px solid #6c757d;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.status-matrix.status-green {
+  border-left-color: #28a745;
+  background-color: #d4edda;
+}
+
+.status-matrix.status-red {
+  border-left-color: #dc3545;
+  background-color: #f8d7da;
+}
+
+.status-matrix.status-blue {
+  border-left-color: #007bff;
+  background-color: #d1ecf1;
+}
+
+.status-matrix.status-orange {
+  border-left-color: #fd7e14;
+  background-color: #fff3cd;
+}
+
+/* Header */
+.matrix-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 8px;
+}
+
+.matrix-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.matrix-status {
+  display: flex;
+  gap: 8px;
+}
+
+/* Status Badge */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-green {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-red {
+  background-color: #dc3545;
+  color: white;
+}
+
+.badge-blue {
+  background-color: #007bff;
+  color: white;
+}
+
+/* Body */
+.matrix-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 576px) {
+  .matrix-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Check Section */
+.check-section {
+  background-color: white;
+  padding: 12px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.check-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  min-width: 70px;
+}
+
+.check-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+
+.check-time .time {
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  font-family: 'Courier New', monospace;
+  min-width: 50px;
+  text-align: right;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge.ontime {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.status-badge.late {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.early {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.status-badge.overtime {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.no-data {
+  color: #999;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Worked Section */
+.worked-section {
+  grid-column: 1 / -1;
+  background-color: white;
+  padding: 12px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.worked-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.worked-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+  font-family: 'Courier New', monospace;
+}
+
+/* Reasons */
+.matrix-reasons {
+  background-color: white;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.reasons-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.reasons-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.reason-item {
+  font-size: 13px;
+  color: #666;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.reason-item:before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #999;
+  font-weight: bold;
+}
+
+/* Action */
+.matrix-action {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-exception {
+  padding: 8px 16px;
+  background-color: #ffc107;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-exception:hover {
+  background-color: #ffb700;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-exception:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .status-matrix {
+    padding: 12px;
+  }
+
+  .matrix-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .check-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .check-time {
+    justify-content: flex-start;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
