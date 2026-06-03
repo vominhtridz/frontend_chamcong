@@ -5,7 +5,7 @@ import { clearAuth } from '../utils/auth';
 const resolveBaseURL = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (import.meta.env.DEV) return '';
-  return 'http://localhost:5000';
+  return 'https://backend-chamcong.onrender.com';
 };
 
 const axiosClient = axios.create({
