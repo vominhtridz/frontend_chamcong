@@ -115,7 +115,7 @@ const Dashboard = () => {
     const id = setInterval(fetchOverview, 15000);
     return () => clearInterval(id);
   }, [fetchOverview]);
-
+console.log(data)
   if (loading && !data) {
     return <div className="py-12 text-center text-gray-500">Đang tải dashboard...</div>;
   }
@@ -132,7 +132,7 @@ const Dashboard = () => {
         <div>
           <h1 className="page-title">Dashboard quản trị</h1>
           <p className="text-sm text-gray-500 mt-1">
-            Ca ngày {shiftDate} · Cập nhật {formatTime(lastRefresh)}
+            Giờ Hiện tại {data?.serverTime?.formattedVN}   · Cập nhật {formatTime(lastRefresh)}
           </p>
         </div>
         <button

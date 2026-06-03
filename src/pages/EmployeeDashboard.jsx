@@ -44,12 +44,11 @@ const EmployeeDashboard = () => {
   const displayName = user?.fullName || user?.email || 'Nhân viên';
   const shiftDate = workConfig?.shiftDate || '—';
   const shiftName = shiftLabel(workConfig?.workShift);
-console.log(workConfig);
   return (
     <div className="page-shell">
       <h1 className="page-title mb-1">Xin chào, {displayName}</h1>
       <p className="text-gray-500 text-sm mb-4 md:mb-6">
-        Ca {shiftName} · ngày {shiftDate} · {workConfig?.workStartTime} → {workConfig?.workEndTime}
+        Giờ hiện tại {workConfig?.serverCurrentTimeFormatted} Và  {shiftName} · ngày {shiftDate} · {workConfig?.workStartTime} → {workConfig?.workEndTime}
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
