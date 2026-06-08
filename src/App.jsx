@@ -20,12 +20,17 @@ import ProtectedRoute from './components/ProtectedRoute';
 import HomeRedirect from './components/HomeRedirect';
 import MainLayout from './components/layout/MainLayout';
 
+import FaceChamCong from './pages/FaceChamCong';
+
 function App() {
   return (
     <BrowserRouter>
       <ToastContainer position="top-right" autoClose={3000} />
       <Routes>
         <Route path="/login" element={<Login />} />
+
+        <Route path="/chamcong" element={<FaceChamCong />} />
+
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 

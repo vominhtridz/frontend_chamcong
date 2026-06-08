@@ -1,4 +1,5 @@
 
+
 3. TÍCH HỢP BÊN THỨ BA (FACE-API & IMGBB)
 Service ImgBB: Code một hàm uploadToImgBB(base64Image). Khi chụp ảnh từ Webcam, chuyển ảnh sang base64, ném cho hàm này gọi API ImgBB và trả về URL ảnh trực tiếp.
 
@@ -52,3 +53,48 @@ Xác thực Backend (Bảo mật cao): Backend lấy descriptor này so sánh v�
 Lưu ImgBB: Backend đẩy Base64 lên ImgBB lấy URL.
 
 Ghi nhận DB: Lưu Log check-in gồm Giờ + URL ảnh. Trả về thông báo thành công cho Frontend kèm âm thanh "Tít! Xin chào Nguyễn Văn A".backend nodejs lưu ảnh vào imgbb api frontend vite react jsx  firebase database realtime 
+=======
+MỤC LỤC
+LỜI CẢM ƠN
+CHƯƠNG 1. TỔNG QUAN ĐỀ TÀI
+1.1. Đặt vấn đề và Lý do chọn đề tài 
+1.2. Mục tiêu và phạm vi nghiên cứu
+1.3. Đối tượng và phương pháp  nghiên cứu
+1.4. Đặt vấn đề và tính cấp thiết
+1.5. Ý nghĩa thực tiễn của đề tài 
+CHƯƠNG 2. CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+2.1. Tổng quan về công nghệ nhận diện khuôn mặt
+2.2. Nghiên cứu thư viện Face-API và Tensor-Flow.js
+2.2.1.Mạng nơ-ron tích chập (CNN) cơ bản 
+2.2.2.Thuật toán phát hiện khuôn mặt (SSD MobileNet V1) 
+2.2.3.Thuật toán trích xuất đặc trưng (ResNet-34) 
+2.3. Kiến trúc Backend với Node.js và mô hình MVC
+2.4. Công nghệ Frontend: React.js và Single Page Application
+2.5. Cơ sở dữ liệu đám mây (Firebase Realtime Database) 
+2.6. Quy trình xử lý ảnh và Img-API
+CHƯƠNG 3. PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
+3.1. Phân tích yêu cầu hệ thống
+3.2. Thiết kế Kiến trúc hệ thống tổng thể
+3.3. Thiết kế Cơ sở dữ liệu (Collections và Ràng buộc)
+3.4. Thiết kế RESTful API (Endpoints và Luồng dữ liệu)
+3.5. Lưu đồ thuật toán chấm công
+3.6. Thiết kế giao diện (UI/UX)
+3.7.Biểu đồ Use-case (Use-case Diagram): Chức năng của Admin, Nhân viên 
+3.8. Biểu đồ tuần tự (Sequence Diagram) 
+CHƯƠNG 4. XÂY DỰNG VÀ TRIỂN KHAI HỆ THỐNG
+4.1. Cấu trúc mã nguồn (Frontend/Backend)
+4.2. Hiện thực hóa mô hình MVC và Middleware
+4.3. Tích hợp Face-API: Thuật toán đăng ký và đối sánh khuôn mặt
+4.4. Cơ chế đồng bộ dữ liệu Realtime
+4.5. Cấu hình triển khai trên Render Cloud
+4.6. Xử lý luồng Camera trực tiếp (Live Stream WebRTC/getUserMedia API). 
+4.7. Giao diện website hoàn chỉnh
+CHƯƠNG 5. KIỂM THỬ VÀ ĐÁNH GIÁ
+5.1. Kịch bản kiểm thử (Test cases)
+5.2. Đánh giá hiệu năng (Độ trễ, Độ chính xác)
+5.3. Thảo luận về các thách thức kỹ thuật
+
+CHƯƠNG 6. KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+
+PHỤ LỤC: Các đoạn code quan trọng và danh mục hình ảnh.
+

@@ -213,6 +213,7 @@ const getDailyStatus = (attendance = {}, settings = {}) => {
   // Check check-out
   if (!attendance.checkOutTime) {
     reasons.push('Không check-out');
+    reasons.push('Không đủ công vì không check-out ra');
   } else if (attendance.checkOutStatus === 'Early') {
     reasons.push(`Về sớm ${attendance.earlyCheckoutMinutes || 0} phút`);
   }
@@ -223,8 +224,13 @@ const getDailyStatus = (attendance = {}, settings = {}) => {
   }
 
   const isValid = reasons.length === 0 && 
+
                   attendance.status === 'OnTime' && 
                   attendance.checkOutStatus === 'OnTime';
+                  attendance.checkInTime &&
+                  attendance.checkOutTime &&
+                  attendance.status === 'OnTime' && 
+                  (attendance.checkOutStatus === 'OnTime' || attendance.checkOutStatus === 'Overtime');
 
   return {
     isValid,

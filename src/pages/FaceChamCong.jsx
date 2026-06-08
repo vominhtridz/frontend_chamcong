@@ -20,17 +20,12 @@ import {
 } from '../utils/livenessDetection';
 import { analyzeFrameBrightness } from '../utils/cameraQuality';
 import { buildCheckinClientMeta } from '../utils/checkinClientMeta';
-import {
-  formatTimeVN,
-  formatGracePeriodMessage,
-  getDailyStatus,
-} from '../utils/vietnamTimeUtils';
-import AttendanceStatusMatrix from '../components/AttendanceStatusMatrix';
 
 const DETECT_INTERVAL_MS = 100;
 const DETECT_INTERVAL_BLINK_MS = 40;
+const SUCCESS_RESET_DELAY = 4000;
 
-const FaceCheckin = () => {
+const FaceChamCong = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -47,7 +42,7 @@ const FaceCheckin = () => {
   const [lightWarning, setLightWarning] = useState('');
   const [progress, setProgress] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [workConfig, setWorkConfig] = useState(null);
+  const [resultData, setResultData] = useState(null);
 
   const syncPhase = (next) => {
     phaseRef.current = next;
@@ -66,6 +61,7 @@ const FaceCheckin = () => {
     setStepIndex(0);
     setProgress(0);
     setLightWarning('');
+    setResultData(null);
   }, []);
 
   const checkLighting = useCallback(() => {
@@ -96,29 +92,16 @@ const FaceCheckin = () => {
     try {
       await loadFaceApiModels();
 
-      const configRes = await axiosClient.get('/api/attendances/work-config');
-      setWorkConfig(configRes.data);
-
-      if (configRes.data?.isCompleted || configRes.data?.phase === 'completed') {
-        syncPhase('done');
-        setStatusMsg(
-          configRes.data?.message ||
-            'Bạn đã hoàn tất chấm công hôm nay. Chờ ngày ca tiếp theo.'
-        );
-        setHintMsg('');
-        return;
-      }
-
       setStatusMsg('Đang mở camera...');
       const video = await waitForVideoElement(() => videoRef.current);
       streamRef.current = await startCamera(video);
 
       const first = CHECKIN_LIVENESS_STEPS[0];
       syncPhase('liveness');
-      setStatusMsg(configRes.data?.message || first.label);
+      setStatusMsg(first.label);
       setHintMsg(first.hint);
     } catch (error) {
-      console.error('[FaceCheckin]', error);
+      console.error('[FaceChamCong]', error);
       setStatusMsg(error.message || 'Không thể truy cập camera hoặc tải model.');
       syncPhase('error');
     }
@@ -130,11 +113,6 @@ const FaceCheckin = () => {
 
   const performCheckIn = useCallback(async () => {
     if (submittingRef.current) return;
-
-    if (workConfig?.isCompleted || workConfig?.phase === 'completed') {
-      toast.info('Bạn đã hoàn tất chấm công hôm nay. Quay lại vào ngày ca tiếp theo.');
-      return;
-    }
 
     submittingRef.current = true;
     setSubmitting(true);
@@ -148,18 +126,18 @@ const FaceCheckin = () => {
       }
 
       syncPhase('capture');
-      setStatusMsg('Đang chụp và xác thực khuôn mặt...');
+      setStatusMsg('Đang chụp và nhận diện khuôn mặt...');
       setHintMsg('Vui lòng giữ yên');
 
       const video = videoRef.current;
       const { descriptor } = await extractFaceDescriptor(video);
       const base64Image = captureFrameBase64(video, canvasRef.current);
       const clientMeta = await buildCheckinClientMeta(canvasRef.current, video);
-      stopCamera();
-
+      
       const livenessChallenge = CHECKIN_LIVENESS_STEPS.map((s) => s.id).join(',');
 
-      const response = await axiosClient.post('/api/attendances/checkin', {
+      // For kiosk mode, we use the public endpoint that matches any employee
+      const response = await axiosClient.post('/api/attendances/kiosk-checkin', {
         descriptor,
         base64Image,
         livenessPassed: true,
@@ -170,35 +148,28 @@ const FaceCheckin = () => {
       toast.success(response.data.message);
       setStatusMsg(response.data.message);
       setHintMsg('');
+      setResultData(response.data);
       syncPhase('done');
 
-      const configRes = await axiosClient.get('/api/attendances/work-config');
-      setWorkConfig(configRes.data);
-
-      if (response.data.action === 'checkIn' && !response.data.alreadyCompleted) {
-        setTimeout(() => startNewSession(), 3500);
-      }
+      // Auto reset for next person
+      setTimeout(() => startNewSession(), SUCCESS_RESET_DELAY);
+      
     } catch (error) {
       const message =
         error.response?.data?.message || error.message || 'Lỗi khi chấm công';
-      try {
-        await axiosClient.post('/api/attendances/log-attempt', {
-          attemptType: error.response?.data?.faceMatchError ? 'face_fail' : 'time_fail',
-          message,
-          faceDistance: error.response?.data?.distance ?? null,
-        });
-      } catch {
-        // bỏ qua lỗi log
-      }
+      
       toast.error(message);
       setStatusMsg(message);
       setHintMsg('Thử lại từ đầu quy trình');
-      await initSession();
+      syncPhase('error');
+      
+      // Auto reset on error as well for next person
+      setTimeout(() => startNewSession(), SUCCESS_RESET_DELAY);
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
     }
-  }, [stopCamera, initSession, startNewSession, checkLighting, workConfig]);
+  }, [initSession, startNewSession, checkLighting]);
 
   const runLivenessLoop = useCallback(() => {
     const video = videoRef.current;
@@ -313,20 +284,17 @@ const FaceCheckin = () => {
       : null;
 
   return (
-    <div className="page-shell">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-4 md:mb-6">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-            Chấm công bằng khuôn mặt
-          </h1>
-          <p className="text-gray-600">
-            Làm lần lượt 4 bước theo hướng dẫn trên màn hình. Bật đèn đủ sáng trước khi bắt đầu.
-          </p>
+    <div className="min-h-screen bg-slate-100 flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-5xl bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div className="bg-blue-600 p-6 text-center text-white">
+          <h1 className="text-3xl font-bold mb-2">Hệ Thống Nhận Diện Chấm Công</h1>
+          <p className="text-blue-100 text-lg">Chấm công tự động đa nhân viên - Vui lòng thực hiện theo hướng dẫn</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] gap-6">
-          <div className="bg-white rounded-2xl shadow p-4">
-            <div className="relative overflow-hidden rounded-2xl bg-black aspect-video">
+        <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-[1fr_350px] gap-8">
+          {/* Camera Section */}
+          <div className="flex flex-col">
+            <div className="relative overflow-hidden rounded-2xl bg-black aspect-video shadow-inner flex-grow">
               <video
                 ref={videoRef}
                 autoPlay
@@ -335,28 +303,59 @@ const FaceCheckin = () => {
                 className="w-full h-full object-cover scale-x-[-1]"
               />
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <div className="w-36 h-48 sm:w-48 sm:h-64 border-2 border-dashed border-green-400 rounded-[50%] opacity-80" />
+                <div className="w-64 h-80 sm:w-80 sm:h-96 border-4 border-dashed border-green-400 rounded-[50%] opacity-80" />
               </div>
+              
               {phase === 'loading' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-white text-sm">
-                  Đang khởi động camera &amp; AI...
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white">
+                  <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-lg font-medium">Đang khởi động hệ thống...</p>
                 </div>
               )}
+              
               {phase === 'capture' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-sm font-medium">
-                  Đang xác thực...
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white">
+                  <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                  <p className="text-lg font-medium">Đang phân tích khuôn mặt...</p>
                 </div>
               )}
+
+              {phase === 'done' && resultData && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/90 text-white p-6 text-center">
+                  <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                  <h2 className="text-3xl font-bold mb-2">{resultData.fullName}</h2>
+                  <p className="text-xl mb-4">{resultData.message}</p>
+                  <p className="text-sm text-green-200">Hệ thống sẽ tự động khởi động lại trong giây lát...</p>
+                </div>
+              )}
+
+              {phase === 'error' && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/90 text-white p-6 text-center">
+                  <div className="w-20 h-20 bg-red-500 rounded-full flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">Thất bại</h2>
+                  <p className="text-lg mb-4">{statusMsg}</p>
+                  <p className="text-sm text-red-200">Hệ thống sẽ tự động khởi động lại trong giây lát...</p>
+                </div>
+              )}
+
               {lightWarning && phase === 'liveness' && (
-                <div className="absolute top-3 left-3 right-3 px-3 py-2 rounded-lg bg-amber-500/95 text-white text-xs font-semibold text-center">
+                <div className="absolute top-4 left-4 right-4 px-4 py-3 rounded-xl bg-amber-500/95 text-white text-sm font-semibold text-center shadow-lg">
                   💡 {lightWarning}
                 </div>
               )}
+              
               {phase === 'liveness' && currentStep && (
-                <div className="absolute top-3 left-3 right-3 text-center">
-                  <span className="inline-block px-3 py-1 rounded-full bg-black/60 text-white text-xs font-semibold">
-                    Bước {Math.min(stepIndex + 1, CHECKIN_LIVENESS_STEPS.length)}/
-                    {CHECKIN_LIVENESS_STEPS.length}
+                <div className="absolute top-4 left-4 right-4 text-center">
+                  <span className="inline-block px-4 py-2 rounded-full bg-black/70 text-white text-sm font-bold shadow-lg">
+                    Bước {Math.min(stepIndex + 1, CHECKIN_LIVENESS_STEPS.length)} / {CHECKIN_LIVENESS_STEPS.length}
                     {stepIndex >= CHECKIN_LIVENESS_STEPS.length ? ' — Chuẩn bị chụp' : ''}
                   </span>
                 </div>
@@ -364,132 +363,91 @@ const FaceCheckin = () => {
               <canvas ref={canvasRef} className="hidden" />
             </div>
 
-            <div className="mt-4 px-4 py-3 rounded-xl bg-slate-50 border border-slate-200">
-              <p className="font-medium text-slate-800">Hướng dẫn hiện tại</p>
-              <p
-                className={`mt-2 text-base font-semibold ${
-                  phase === 'error' ? 'text-red-600' : 'text-indigo-700'
-                }`}
-              >
+            {/* Status Bar */}
+            <div className="mt-6 p-5 rounded-2xl bg-blue-50 border border-blue-100">
+              <h3 className="text-sm font-bold text-blue-800 uppercase tracking-wider mb-2">Trạng thái hiện tại</h3>
+              <p className={`text-xl font-bold ${phase === 'error' ? 'text-red-600' : phase === 'done' ? 'text-green-600' : 'text-blue-700'}`}>
                 {statusMsg}
               </p>
               {hintMsg && phase === 'liveness' && (
-                <p className="mt-1 text-sm text-slate-600">{hintMsg}</p>
+                <p className="mt-2 text-md text-slate-600 font-medium">{hintMsg}</p>
               )}
+              
               {(phase === 'liveness' || phase === 'capture') && (
-                <div className="mt-3 h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                <div className="mt-4 h-3 bg-slate-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-green-500 transition-all duration-200"
+                    className="h-full bg-blue-600 transition-all duration-300 ease-out"
                     style={{ width: `${progress}%` }}
                   />
                 </div>
               )}
-              {phase === 'liveness' && (
-                <ul className="mt-3 flex flex-wrap gap-2">
-                  {CHECKIN_LIVENESS_STEPS.map((s, i) => (
-                    <li
-                      key={s.id}
-                      className={`text-xs px-2 py-1 rounded-full ${
-                        i < stepIndex
-                          ? 'bg-green-100 text-green-800'
-                          : i === stepIndex
-                            ? 'bg-indigo-100 text-indigo-800 ring-2 ring-indigo-400'
-                            : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {i + 1}.{' '}
-                      {s.id === 'front'
-                        ? 'Thẳng'
-                        : s.id === 'blink'
-                          ? 'Chớp mắt'
-                          : s.id === 'turn_left'
-                            ? 'Trái'
-                            : 'Phải'}
-                    </li>
-                  ))}
-                  {stepIndex >= CHECKIN_LIVENESS_STEPS.length && (
-                    <li className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800 ring-2 ring-indigo-400">
-                      5. Chụp
-                    </li>
-                  )}
-                </ul>
-              )}
+            </div>
+          </div>
+
+          {/* Sidebar / Instructions */}
+          <div className="flex flex-col space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <h2 className="font-bold text-lg text-slate-800 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Hướng dẫn chấm công
+              </h2>
+              <ul className="space-y-3">
+                {CHECKIN_LIVENESS_STEPS.map((s, i) => (
+                  <li 
+                    key={s.id}
+                    className={`flex items-start p-3 rounded-xl transition-colors ${
+                      i < stepIndex 
+                        ? 'bg-green-50 text-green-800 border border-green-100' 
+                        : i === stepIndex && phase === 'liveness'
+                          ? 'bg-blue-50 text-blue-800 border-2 border-blue-300 shadow-sm'
+                          : 'bg-slate-50 text-slate-500'
+                    }`}
+                  >
+                    <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
+                      i < stepIndex ? 'bg-green-200 text-green-800' : i === stepIndex && phase === 'liveness' ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+                    }`}>
+                      {i < stepIndex ? '✓' : i + 1}
+                    </span>
+                    <span className="text-sm font-medium leading-tight pt-0.5">{s.label.replace(/^Bước \d\/\d: /, '')}</span>
+                  </li>
+                ))}
+                <li className={`flex items-start p-3 rounded-xl transition-colors ${
+                  stepIndex >= CHECKIN_LIVENESS_STEPS.length && phase === 'liveness'
+                    ? 'bg-blue-50 text-blue-800 border-2 border-blue-300 shadow-sm'
+                    : phase === 'done' || phase === 'capture'
+                      ? 'bg-green-50 text-green-800 border border-green-100'
+                      : 'bg-slate-50 text-slate-500'
+                }`}>
+                  <span className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
+                    stepIndex >= CHECKIN_LIVENESS_STEPS.length && phase === 'liveness' ? 'bg-blue-600 text-white' : phase === 'done' || phase === 'capture' ? 'bg-green-200 text-green-800' : 'bg-slate-200 text-slate-500'
+                  }`}>
+                    {phase === 'done' || phase === 'capture' ? '✓' : '5'}
+                  </span>
+                  <span className="text-sm font-medium leading-tight pt-0.5">Xác thực hệ thống</span>
+                </li>
+              </ul>
             </div>
 
-            {(phase === 'done' || phase === 'error') && !submitting && (
+            <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200 shadow-sm">
+              <h3 className="font-bold text-amber-800 mb-2 flex items-center text-sm">
+                <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                Lưu ý quan trọng
+              </h3>
+              <ul className="list-disc list-inside text-xs text-amber-900 space-y-1.5 ml-1">
+                <li>Đảm bảo môi trường đủ sáng</li>
+                <li>Không đeo kính râm hoặc khẩu trang</li>
+                <li>Hệ thống tự động sẵn sàng cho người tiếp theo sau khi chấm công</li>
+              </ul>
+            </div>
+
+            {(phase === 'error' || phase === 'done') && !submitting && (
               <button
                 type="button"
                 onClick={startNewSession}
-                disabled={workConfig?.isCompleted && phase === 'done'}
-                className="mt-4 w-full py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold text-lg hover:bg-blue-700 shadow-md transition-all active:scale-[0.98]"
               >
-                {workConfig?.isCompleted && phase === 'done'
-                  ? 'Đã xong ca hôm nay — quay lại ngày mai'
-                  : phase === 'error'
-                    ? 'Thử lại'
-                    : workConfig?.phase === 'checkOut' || workConfig?.record?.checkInTime
-                      ? 'Tiếp tục check-out'
-                      : 'Chấm công lần nữa'}
+                Chấm Công Tiếp Theo Ngay
               </button>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div className="bg-white rounded-2xl shadow p-5 border border-slate-200">
-              <h2 className="font-bold text-lg mb-3">Ca làm hiện tại</h2>
-              {workConfig ? (
-                <ul className="text-sm text-slate-700 space-y-2">
-                  <li>
-                    <span className="text-slate-500">Ngày ca:</span>{' '}
-                    <strong>{workConfig.shiftDate}</strong>
-                  </li>
-                  <li>
-                    <span className="text-slate-500">Check-in:</span> từ{' '}
-                    <strong>{workConfig.workStartTime}</strong> — trễ vẫn được ghi (ngưỡng đúng
-                    giờ: {workConfig.lateThreshold} phút)
-                  </li>
-
-                  <li>
-                    <span className="text-slate-500">Check-out:</span> bất kỳ lúc nào sau khi đã
-                    check-in (ghi sớm/muộn nếu có)
-                                
-                    <span className="text-slate-500">Check-out:</span> Chỉ được thực hiện sau khi kết thúc ca (<strong>{workConfig.workEndTime}</strong>). Nếu không check-out sẽ không được tính công.
-
-                  </li>
-                  <li>
-                    <span className="text-slate-500">Giới hạn:</span> mỗi ngày ca chỉ 1 check-in + 1
-                    check-out
-                  </li>
-                  <li className="pt-2 text-indigo-700 font-medium">{workConfig.message}</li>
-                </ul>
-              ) : (
-                <p className="text-sm text-slate-500">Đang tải cấu hình ca...</p>
-              )}
-            </div>
-            <div className="bg-white rounded-2xl shadow p-5 border border-slate-200">
-              <h2 className="font-bold text-lg mb-3">Quy trình (4 bước + chụp)</h2>
-              <ol className="list-decimal list-inside text-sm text-slate-700 space-y-2">
-                {CHECKIN_LIVENESS_STEPS.map((s) => (
-                  <li key={s.id}>{s.label.replace(/^Bước \d\/\d: /, '')}</li>
-                ))}
-                <li>Nhìn thẳng camera — hệ thống tự chụp và so khớp đúng tài khoản của bạn</li>
-              </ol>
-            </div>
-            <div className="bg-amber-50 rounded-2xl p-5 border border-amber-200 text-sm text-amber-900">
-              Bật đèn đủ sáng trước khi chấm công. Trễ vẫn được ghi nhận và tính giờ làm. Sau khi
-              check-out xong, chờ ngày ca tiếp theo mới chấm lại. Muốn thử nhiều lần? Dùng trang
-              Test chấm công.
-            </div>
-            {workConfig?.isCompleted && (
-              <div className="bg-green-50 rounded-2xl p-5 border border-green-200 text-sm text-green-900">
-                ✓ Bạn đã hoàn tất check-in và check-out cho ca {workConfig.shiftDate}.
-              </div>
-            )}
-            {workConfig?.record && (
-              <AttendanceStatusMatrix 
-                attendance={workConfig.record} 
-                settings={workConfig}
-              />
             )}
           </div>
         </div>
@@ -498,4 +456,4 @@ const FaceCheckin = () => {
   );
 };
 
-export default FaceCheckin;
+export default FaceChamCong;

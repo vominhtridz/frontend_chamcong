@@ -8,6 +8,7 @@ let modelsLoadPromise = null;
 const isSecureContextForCamera = () =>
   window.isSecureContext ||
   window.location.hostname === 'https://backend-chamcong.onrender.com' ||
+  window.location.hostname === 'https://backend-chamcong.onrender.com' ||
   window.location.hostname === '127.0.0.1';
 
 export const loadFaceApiModels = async () => {
